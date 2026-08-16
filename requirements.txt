@@ -1,0 +1,7 @@
+datasets==4.8.5
+fastembed==0.7.4
+qdrant-client==1.15.1
+openai==2.45.0
+psycopg2-binary==2.9.12
+streamlit==1.59.1
+tqdm==4.67.1
