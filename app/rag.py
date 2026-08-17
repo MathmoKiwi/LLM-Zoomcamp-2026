@@ -9,9 +9,9 @@ Four retrieval modes, all served from one Qdrant collection:
 evals/eval_retrieval.py compares the four and the README records which one
 ships as the default.
 
-Extension points, in rough order of payoff (each is a rubric point):
-  TODO(query-rewriting): one cheap LLM call that reformulates the user
-      question before retrieval. Evaluate against no-rewriting.
+search() and answer() also take rewrite=True, which spends one LLM call
+reformulating the question into knowledge-base vocabulary before
+retrieval. evals/eval_retrieval.py --rewrite measures the delta.
 """
 
 import time
@@ -59,11 +59,13 @@ def _rerank_model():
     return _reranker
 
 
-def search(query, mode="hybrid", limit=5):
+def search(query, mode="hybrid", limit=5, rewrite=False):
     """Return a list of payload dicts (filename, title, text, score)."""
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
 
+    if rewrite:
+        query = rewrite_query(query)
     if mode == "hybrid_rerank":
         return _hybrid_rerank(query, limit)
 
@@ -155,6 +157,36 @@ PROMPTS = {
 }
 
 
+# Deliberately not a PROMPTS entry: eval_llm.py and the UI iterate PROMPTS
+# as answer-prompt variants, and this one rewrites queries instead.
+REWRITE_PROMPT = (
+    "Rewrite the support question below into the technical vocabulary of an "
+    "enterprise IT knowledge base. Expand abbreviations, name the likely "
+    "product or component, and use the error and configuration terms a "
+    "technote would use. Do not answer the question and do not add facts "
+    "that are not implied by it.\n"
+    "Reply with the rewritten question only.\n\n"
+    "QUESTION:\n{question}\n\nREWRITTEN QUESTION:"
+)
+
+
+def rewrite_query(question):
+    """Reformulate the question for retrieval. Falls back to the original on
+    any failure or empty reply: rewriting must never break the round trip."""
+    try:
+        resp = _client().chat.completions.create(
+            model=config.LLM_MODEL,
+            messages=[
+                {"role": "user", "content": REWRITE_PROMPT.format(question=question)}
+            ],
+            temperature=0,
+        )
+        rewritten = (resp.choices[0].message.content or "").strip()
+    except Exception:
+        return question
+    return rewritten or question
+
+
 def build_context(hits):
     blocks = []
     for h in hits:
@@ -162,10 +194,10 @@ def build_context(hits):
     return "\n\n---\n\n".join(blocks)
 
 
-def answer(question, mode="hybrid", prompt_version="v2", limit=5):
+def answer(question, mode="hybrid", prompt_version="v2", limit=5, rewrite=False):
     """Full RAG round trip. Returns a dict the UI logs to Postgres."""
     t0 = time.time()
-    hits = search(question, mode=mode, limit=limit)
+    hits = search(question, mode=mode, limit=limit, rewrite=rewrite)
     prompt = PROMPTS[prompt_version].format(
         context=build_context(hits), question=question
     )

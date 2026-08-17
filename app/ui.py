@@ -27,6 +27,7 @@ with st.sidebar:
     mode = st.selectbox("Retrieval mode", rag.MODES, index=2)
     prompt_version = st.selectbox("Prompt", list(rag.PROMPTS), index=1)
     top_k = st.slider("Documents to retrieve", 1, 10, 5)
+    rewrite = st.checkbox("Rewrite query before retrieval", value=False)
 
 # One-time DB init per session. Cheap because CREATE TABLE IF NOT EXISTS.
 if "db_ready" not in st.session_state:
@@ -65,7 +66,11 @@ if question:
     with st.chat_message("assistant"):
         with st.spinner("Searching technotes..."):
             result = rag.answer(
-                question, mode=mode, prompt_version=prompt_version, limit=top_k
+                question,
+                mode=mode,
+                prompt_version=prompt_version,
+                limit=top_k,
+                rewrite=rewrite,
             )
         st.write(result["answer"])
         with st.expander("Sources"):
