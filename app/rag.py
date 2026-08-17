@@ -1,17 +1,15 @@
 """Retrieval and answer generation.
 
-Three retrieval modes, all served from one Qdrant collection:
-  keyword : BM25 sparse vectors only
-  vector  : dense embeddings only
-  hybrid  : both, fused with reciprocal rank fusion (RRF)
+Four retrieval modes, all served from one Qdrant collection:
+  keyword       : BM25 sparse vectors only
+  vector        : dense embeddings only
+  hybrid        : both, fused with reciprocal rank fusion (RRF)
+  hybrid_rerank : hybrid candidates rescored with a cross-encoder
 
-evals/eval_retrieval.py compares the three and the README records which one
+evals/eval_retrieval.py compares the four and the README records which one
 ships as the default.
 
 Extension points, in rough order of payoff (each is a rubric point):
-  TODO(reranking): pull top 20 candidates, rescore with a cross-encoder
-      (e.g. fastembed's TextCrossEncoder or sentence-transformers), keep
-      top 5. Add as a fourth mode so the eval table shows the delta.
   TODO(query-rewriting): one cheap LLM call that reformulates the user
       question before retrieval. Evaluate against no-rewriting.
 """
@@ -19,12 +17,13 @@ Extension points, in rough order of payoff (each is a rubric point):
 import time
 
 from fastembed import SparseTextEmbedding, TextEmbedding
+from fastembed.rerank.cross_encoder import TextCrossEncoder
 from openai import OpenAI
 from qdrant_client import QdrantClient, models
 
 from app import config
 
-MODES = ("keyword", "vector", "hybrid")
+MODES = ("keyword", "vector", "hybrid", "hybrid_rerank")
 
 # Loaded once per process. fastembed downloads model weights to local
 # cache on first use, so the first call is slow and the rest are not.
@@ -32,6 +31,7 @@ _dense = None
 _sparse = None
 _qdrant = None
 _llm = None
+_reranker = None
 
 
 def _models():
@@ -50,10 +50,22 @@ def _client():
     return _llm
 
 
+def _rerank_model():
+    # Kept out of _models() so only hybrid_rerank pays the cross-encoder
+    # download and load.
+    global _reranker
+    if _reranker is None:
+        _reranker = TextCrossEncoder(config.RERANK_MODEL)
+    return _reranker
+
+
 def search(query, mode="hybrid", limit=5):
     """Return a list of payload dicts (filename, title, text, score)."""
     if mode not in MODES:
         raise ValueError(f"mode must be one of {MODES}, got {mode!r}")
+
+    if mode == "hybrid_rerank":
+        return _hybrid_rerank(query, limit)
 
     dense_model, sparse_model, qdrant = _models()
 
@@ -101,6 +113,20 @@ def search(query, mode="hybrid", limit=5):
         payload["score"] = p.score
         out.append(payload)
     return out
+
+
+def _hybrid_rerank(query, limit):
+    """Widen the hybrid search to RERANK_CANDIDATES chunks, rescore every
+    (query, chunk text) pair with the cross-encoder, then cut back to limit.
+    The RRF score is replaced by the cross-encoder logit, which can be
+    negative."""
+    candidates = max(limit, config.RERANK_CANDIDATES)
+    hits = search(query, mode="hybrid", limit=candidates)
+    scores = list(_rerank_model().rerank(query, [h["text"] for h in hits]))
+    for h, score in zip(hits, scores):
+        h["score"] = score
+    hits.sort(key=lambda h: h["score"], reverse=True)
+    return hits[:limit]
 
 
 # Two prompt variants so the LLM evaluation compares approaches rather than

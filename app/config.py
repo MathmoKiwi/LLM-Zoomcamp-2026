@@ -11,6 +11,8 @@ COLLECTION = os.getenv("QDRANT_COLLECTION", "technotes")
 DENSE_MODEL = os.getenv("DENSE_MODEL", "BAAI/bge-small-en-v1.5")
 DENSE_DIM = int(os.getenv("DENSE_DIM", "384"))
 SPARSE_MODEL = os.getenv("SPARSE_MODEL", "Qdrant/bm25")
+RERANK_MODEL = os.getenv("RERANK_MODEL", "Xenova/ms-marco-MiniLM-L-6-v2")
+RERANK_CANDIDATES = int(os.getenv("RERANK_CANDIDATES", "20"))
 
 # LLM. Any OpenAI-compatible endpoint works: OpenAI, Groq, or a local
 # Ollama/TabbyAPI instance. Set OPENAI_BASE_URL accordingly.

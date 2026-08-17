@@ -58,9 +58,6 @@ def main():
 
     results = [evaluate_mode(questions, mode, args.k) for mode in rag.MODES]
 
-    # TODO(reranking): once a reranking mode exists in rag.py, it appears
-    # in rag.MODES and lands in this table automatically.
-
     print(f"\n| mode | hit rate@{args.k} | MRR@{args.k} | n |")
     print("|---|---|---|---|")
     for r in results:
