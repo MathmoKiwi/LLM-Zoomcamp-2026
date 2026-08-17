@@ -62,7 +62,7 @@ def search(query, mode="hybrid", limit=5):
     if mode in ("vector", "hybrid"):
         dense_vec = list(dense_model.embed([query]))[0].tolist()
     if mode in ("keyword", "hybrid"):
-        sv = list(sparse_model.embed([query]))[0]
+        sv = list(sparse_model.query_embed(query))[0]
         sparse_vec = models.SparseVector(
             indices=sv.indices.tolist(), values=sv.values.tolist()
         )
