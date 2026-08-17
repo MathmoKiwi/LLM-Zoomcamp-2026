@@ -1,5 +1,8 @@
 # Convenience targets. Everything also works as plain docker compose commands.
 
+# The ingest/ source directory otherwise satisfies the ingest target.
+.PHONY: up down ingest eval-sets eval-retrieval eval-llm logs psql
+
 up:
 	docker compose up -d --build
 
