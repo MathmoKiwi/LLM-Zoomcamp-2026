@@ -57,7 +57,8 @@ def chunk_text(text, max_chars=CHUNK_CHARS):
                 chunks.append(p[i : i + max_chars])
             continue
         if len(current) + len(p) + 2 > max_chars:
-            chunks.append(current)
+            if current:
+                chunks.append(current)
             current = p
         else:
             current = f"{current}\n\n{p}" if current else p
