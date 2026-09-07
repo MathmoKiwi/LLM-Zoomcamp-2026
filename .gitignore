@@ -5,3 +5,9 @@ data/*
 !data/.gitkeep
 evals/*.csv
 .venv/
+
+# local helper scripts, not part of the project
+check_dataset.py
+run_mvp.sh
+overnight.sh
+browser_prompt.md
