@@ -103,6 +103,25 @@ Without Docker: `pip install -r requirements.txt`, start Qdrant and
 Postgres however you like, set the env vars from `.env.example`, then run
 the same scripts directly.
 
+### The interface
+
+![Technote Copilot answering a support question](docs/app-answer.png)
+
+Answers are generated only from retrieved chunks, and every turn carries a
+thumbs rating that lands in Postgres for the monitoring dashboard. The
+sidebar switches retrieval mode and prompt variant at runtime, so all four
+modes and both prompts are reachable without a restart; the shot above is
+mid-comparison on `hybrid_rerank` and `v2` rather than the shipped defaults
+of `hybrid` and `v1`.
+
+![Sources, and NOT_FOUND on out-of-corpus questions](docs/app-not-found.png)
+
+The Sources expander lists the technote filenames behind each answer. Below
+it are the two off-domain questions, both answered with exactly `NOT_FOUND`.
+That is the behaviour the whole project is built around: the corpus does not
+cover Fortnite or pizza, so the correct output is a refusal rather than a
+plausible-sounding guess.
+
 ## Evaluation
 
 The `make` targets below are convenience wrappers. If you do not have make
