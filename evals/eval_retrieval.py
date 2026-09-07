@@ -5,8 +5,10 @@ their parent filename in first-seen order before scoring, because the gold
 labels are filenames. A question counts as a hit if any gold filename shows
 up in the top k unique documents.
 
-Run:  python evals/eval_retrieval.py [--k 5] [--sample 0]
+Run:  python evals/eval_retrieval.py [--k 5] [--sample 0] [--rewrite]
       --sample 0 means the full answerable set (~700 questions).
+      --rewrite re-runs the best base mode with query rewriting and appends
+      one "<mode>+rw" row. That costs one LLM call per question.
 Writes evals/retrieval_results.csv and prints a markdown table for the README.
 """
 
@@ -30,11 +32,12 @@ def unique_filenames(hits):
     return seen
 
 
-def evaluate_mode(questions, mode, k):
+def evaluate_mode(questions, mode, k, rewrite=False):
+    label = f"{mode}+rw" if rewrite else mode
     hit, rr_sum = 0, 0.0
-    for q in tqdm(questions, desc=mode):
+    for q in tqdm(questions, desc=label):
         # Retrieve extra chunks since several may come from one document.
-        hits = rag.search(q["question"], mode=mode, limit=k * 3)
+        hits = rag.search(q["question"], mode=mode, limit=k * 3, rewrite=rewrite)
         docs = unique_filenames(hits)[:k]
         gold = set(q["gold_filenames"])
         rank = next((i + 1 for i, d in enumerate(docs) if d in gold), None)
@@ -42,13 +45,22 @@ def evaluate_mode(questions, mode, k):
             hit += 1
             rr_sum += 1.0 / rank
     n = len(questions)
-    return {"mode": mode, "hit_rate": hit / n, "mrr": rr_sum / n, "n": n, "k": k}
+    return {"mode": label, "hit_rate": hit / n, "mrr": rr_sum / n, "n": n, "k": k}
+
+
+def best_result(results):
+    return max(results, key=lambda r: (r["hit_rate"], r["mrr"]))
 
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--k", type=int, default=5)
     parser.add_argument("--sample", type=int, default=0, help="0 = full set")
+    parser.add_argument(
+        "--rewrite",
+        action="store_true",
+        help="also evaluate the best base mode with query rewriting",
+    )
     args = parser.parse_args()
 
     with open(config.ANSWERABLE_PATH) as f:
@@ -58,8 +70,9 @@ def main():
 
     results = [evaluate_mode(questions, mode, args.k) for mode in rag.MODES]
 
-    # TODO(reranking): once a reranking mode exists in rag.py, it appears
-    # in rag.MODES and lands in this table automatically.
+    if args.rewrite:
+        best = best_result(results)
+        results.append(evaluate_mode(questions, best["mode"], args.k, rewrite=True))
 
     print(f"\n| mode | hit rate@{args.k} | MRR@{args.k} | n |")
     print("|---|---|---|---|")

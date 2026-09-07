@@ -51,10 +51,12 @@ Two properties shape the whole design:
                                │
                         ┌──────▼───────┐        ┌────────────┐
                         │  app/rag.py   │───────▶│  LLM (any   │
-                        │  retrieve +   │        │  OpenAI-    │
-                        │  prompt       │        │  compatible │
-                        └──┬───────┬───┘        │  endpoint)  │
-                           │       │            └────────────┘
+                        │  rewrite +    │        │  OpenAI-    │
+                        │  retrieve +   │        │  compatible │
+                        │  rerank +     │        │  endpoint)  │
+                        │  prompt       │        └────────────┘
+                        └──┬───────┬───┘
+                           │       │
                  ┌─────────▼──┐  ┌─▼──────────┐
                  │  Qdrant     │  │  Postgres  │◀── Grafana
                  │  dense+BM25 │  │  logs +    │    dashboard
@@ -64,8 +66,18 @@ Two properties shape the whole design:
 
 One Qdrant collection holds both a dense vector (`BAAI/bge-small-en-v1.5`
 via fastembed, CPU-friendly) and a BM25 sparse vector per chunk, which
-gives three retrieval modes from a single index: keyword, vector, and
-hybrid with reciprocal rank fusion.
+gives four retrieval modes from a single index: keyword, vector, hybrid
+with reciprocal rank fusion, and hybrid_rerank, which widens the hybrid
+search to 20 candidate chunks and rescores each (question, chunk) pair
+with a cross-encoder (`Xenova/ms-marco-MiniLM-L-6-v2`, also fastembed)
+before keeping the top few.
+
+Retrieval can optionally be preceded by query rewriting: one cheap LLM
+call reformulates the question into the technical vocabulary of a
+knowledge base, and only the retrieval step sees the rewritten text. The
+answer prompt and the logged conversation keep the user's original
+wording. It is a sidebar toggle in the UI, off by default, and falls back
+to the original question if the rewrite call fails.
 
 ## Running it
 
@@ -104,8 +116,11 @@ make eval-sets
 make eval-retrieval
 ```
 
-Compares keyword, vector, and hybrid on document-level hit rate and MRR
-over all answerable questions. Results:
+Compares keyword, vector, hybrid, and hybrid_rerank on document-level hit
+rate and MRR over all answerable questions. Adding `--rewrite` re-runs
+whichever mode scored best with query rewriting enabled and appends one
+extra row labelled `<mode>+rw`, so the cost of the rewrite call is visible
+against the mode it has to beat. Results:
 
 | mode | hit rate@5 | MRR@5 | n |
 |---|---|---|---|
@@ -174,8 +189,8 @@ data/       generated artifacts (gitignored)
 | Containerization | everything in docker-compose |
 | Reproducibility | pinned deps, public dataset, quickstart above |
 | Hybrid search | evaluated and available as a mode |
-| Document re-ranking | TODO, see below |
-| Query rewriting | TODO, see below |
+| Document re-ranking | cross-encoder rescoring as the `hybrid_rerank` mode |
+| Query rewriting | `--rewrite` flag and UI toggle, falls back on failure |
 
 ## Remaining work
 
@@ -183,10 +198,6 @@ Marked as `TODO(...)` in the code so they're greppable:
 
 - [ ] `TODO(results)`: run both evals, paste numbers into this README,
       record which retrieval mode and prompt ship as defaults
-- [ ] `TODO(reranking)`: cross-encoder rescoring as a fourth retrieval
-      mode in `app/rag.py`; the eval table picks it up automatically
-- [ ] `TODO(query-rewriting)`: LLM query reformulation before retrieval,
-      evaluated against no rewriting
 - [ ] `TODO(prompts)`: a v3 prompt informed by v1/v2 failure cases
 - [ ] `TODO(dashboard)`: build the Grafana panels from monitoring/queries.md,
       commit the dashboard JSON, screenshot for this README
