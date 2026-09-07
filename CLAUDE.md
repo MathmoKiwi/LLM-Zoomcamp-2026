@@ -29,7 +29,7 @@ rag.py and ingest/ingest.py were written against the qdrant-client 1.15 query AP
 1. NEVER run evals/eval_llm.py. It makes hundreds of paid LLM calls. Only I trigger it.
 2. evals/eval_retrieval.py during development only with --sample 10. Full runs are mine.
 3. Any single test of rag.answer() costs one LLM call. Keep smoke tests to a handful of calls total.
-4. Do not edit the results tables or the rubric self-assessment in README.md. Those are filled by me from real runs.
+4. Results tables and the rubric self-assessment in README.md must only ever contain numbers from real runs. Never invent, estimate or placeholder them. Transcribing measured output is fine and expected.
 5. Never use em dashes or en dashes anywhere: code, comments, docs, commit messages. Use commas, colons, or parentheses instead. No emoji.
 6. Comments explain why, briefly. No decorative or narrating comments.
 7. Small atomic commits, imperative mood messages. Never force push, never amend published commits. Ask before any destructive operation (volume deletion, collection drops outside ingest, file deletion).
