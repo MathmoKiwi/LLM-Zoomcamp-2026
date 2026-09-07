@@ -271,14 +271,4 @@ data/       generated artifacts (gitignored)
 | Document re-ranking | cross-encoder rescoring as the `hybrid_rerank` mode |
 | Query rewriting | `--rewrite` flag and UI toggle, falls back on failure |
 
-## Remaining work
 
-Marked as `TODO(...)` in the code so they're greppable:
-
-- [ ] `TODO(prompts)`: a v3 prompt informed by v1/v2 failure cases. v1
-      abstains on 35% of answerable questions, so the target is recovering
-      those without moving the hallucination rate
-- [ ] Raise the chunk limit `answer()` passes to the model. Retrieval finds
-      the gold document 94% of the time, but the generator only sees 5
-      chunks, which is the most likely cause of the wrong abstentions
-- [ ] Cloud deployment for the bonus points
