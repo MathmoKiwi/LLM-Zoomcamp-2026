@@ -94,7 +94,8 @@ docker compose run --rm ingest    # download dataset, chunk, embed, index
 ```
 
 Then open http://localhost:8501 for the app and http://localhost:3000 for
-Grafana. Ingestion downloads the dataset from Hugging Face and embeds
+Grafana. Postgres is published on host port 5433 so it does not clash with
+a locally installed Postgres; inside the compose network it is still 5432. Ingestion downloads the dataset from Hugging Face and embeds
 ~2-3k chunks on CPU; expect a few minutes on first run.
 
 Without Docker: `pip install -r requirements.txt`, start Qdrant and

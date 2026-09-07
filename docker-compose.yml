@@ -13,7 +13,9 @@ services:
       POSTGRES_USER: ${PG_USER:-technote}
       POSTGRES_PASSWORD: ${PG_PASSWORD:-technote}
     ports:
-      - "5432:5432"
+      # Host 5433: 5432 is usually taken by a locally installed Postgres.
+      # Everything inside the compose network still uses 5432.
+      - "5433:5432"
     volumes:
       - pg_data:/var/lib/postgresql/data
     healthcheck:
