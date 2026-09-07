@@ -1,6 +1,7 @@
 """Central config. Everything comes from environment variables so the same
 code runs locally, in docker-compose, and in CI without edits."""
 
+import json
 import os
 
 # Qdrant
@@ -20,6 +21,10 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", "")
 OPENAI_BASE_URL = os.getenv("OPENAI_BASE_URL") or None
 LLM_MODEL = os.getenv("LLM_MODEL", "gpt-4o-mini")
 JUDGE_MODEL = os.getenv("JUDGE_MODEL", LLM_MODEL)
+
+# Some OpenAI-compatible providers reject requests that lack their own routing
+# headers, so allow arbitrary ones as a JSON object.
+LLM_EXTRA_HEADERS = json.loads(os.getenv("LLM_EXTRA_HEADERS") or "{}")
 
 # Postgres (feedback + monitoring)
 PG_HOST = os.getenv("PG_HOST", "localhost")

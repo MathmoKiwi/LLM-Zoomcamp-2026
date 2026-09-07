@@ -46,7 +46,11 @@ def _models():
 def _client():
     global _llm
     if _llm is None:
-        _llm = OpenAI(api_key=config.OPENAI_API_KEY, base_url=config.OPENAI_BASE_URL)
+        _llm = OpenAI(
+            api_key=config.OPENAI_API_KEY,
+            base_url=config.OPENAI_BASE_URL,
+            default_headers=config.LLM_EXTRA_HEADERS or None,
+        )
     return _llm
 
 
