@@ -189,8 +189,8 @@ data/       generated artifacts (gitignored)
 | Containerization | everything in docker-compose |
 | Reproducibility | pinned deps, public dataset, quickstart above |
 | Hybrid search | evaluated and available as a mode |
-| Document re-ranking | TODO, see below |
-| Query rewriting | TODO, see below |
+| Document re-ranking | cross-encoder rescoring as the `hybrid_rerank` mode |
+| Query rewriting | `--rewrite` flag and UI toggle, falls back on failure |
 
 ## Remaining work
 
