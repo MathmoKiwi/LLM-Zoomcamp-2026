@@ -25,7 +25,7 @@ st.caption(
 with st.sidebar:
     st.header("Settings")
     mode = st.selectbox("Retrieval mode", rag.MODES, index=2)
-    prompt_version = st.selectbox("Prompt", list(rag.PROMPTS), index=1)
+    prompt_version = st.selectbox("Prompt", list(rag.PROMPTS), index=0)
     top_k = st.slider("Documents to retrieve", 1, 10, 5)
     rewrite = st.checkbox("Rewrite query before retrieval", value=False)
 

@@ -137,6 +137,8 @@ def _hybrid_rerank(query, limit):
 
 # Two prompt variants so the LLM evaluation compares approaches rather than
 # grading a single prompt. v2 is stricter about grounding and citations.
+# v1 ships as the default: v2 doubled wrong abstentions for no measurable
+# drop in hallucination rate. See the evaluation table in the README.
 # TODO(prompts): add a v3 of your own design after looking at v1 vs v2
 # failure cases. The eval harness picks up any key added to PROMPTS.
 PROMPTS = {
@@ -198,7 +200,7 @@ def build_context(hits):
     return "\n\n---\n\n".join(blocks)
 
 
-def answer(question, mode="hybrid", prompt_version="v2", limit=5, rewrite=False):
+def answer(question, mode="hybrid", prompt_version="v1", limit=5, rewrite=False):
     """Full RAG round trip. Returns a dict the UI logs to Postgres."""
     t0 = time.time()
     hits = search(question, mode=mode, limit=limit, rewrite=rewrite)

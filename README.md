@@ -31,13 +31,14 @@ carries its gold technote(s) in a `contexts` field.
 Two properties shape the whole design:
 
 1. There is no separate corpus file. The knowledge base is the union of all
-   `contexts`, deduplicated by filename (roughly 600-700 technotes). That
-   means most documents in the index are the gold answer to something, so
+   `contexts`, deduplicated by filename, which comes to 496 technotes and
+   2023 chunks. That means most documents in the index are the gold answer
+   to something, so
    retrieval scores here will read higher than they would against the
    original TechQA's 800k-technote haystack. I state this openly rather
    than let the numbers flatter the system.
-2. About a fifth of the questions are labelled `is_impossible`: real
-   questions the corpus cannot answer. They ship with no gold document and
+2. A third of the questions (300 of 910) are labelled `is_impossible`:
+   real questions the corpus cannot answer. They ship with no gold document and
    no reference answer. These become a hallucination benchmark for free,
    with human-made ground truth instead of LLM-generated labels.
 
@@ -131,12 +132,30 @@ against the mode it has to beat. Results:
 
 | mode | hit rate@5 | MRR@5 | n |
 |---|---|---|---|
-| keyword | TODO | TODO | ~700 |
-| vector | TODO | TODO | ~700 |
-| hybrid | TODO | TODO | ~700 |
+| keyword | 0.892 | 0.802 | 610 |
+| vector | 0.918 | 0.824 | 610 |
+| **hybrid** | **0.938** | **0.858** | 610 |
+| hybrid_rerank | 0.913 | 0.823 | 610 |
 
-<!-- TODO(results): run the eval, paste the table, and state which mode
-     ships as the default and why. -->
+**`hybrid` ships as the default.** It wins on both metrics, and the ordering
+is what the design predicted for everything except the reranker: BM25 alone
+is weakest, dense embeddings beat it, and fusing the two beats either.
+
+Reranking made things worse, not better. `hybrid_rerank` scored below plain
+`hybrid` on both measures despite starting from a wider candidate pool, and
+the likely reason is a mismatch between the chunks and the cross-encoder.
+`Xenova/ms-marco-MiniLM-L-6-v2` takes 512 tokens, while an 1800-character
+chunk is roughly 450 tokens before the question is prepended, so the tail of
+each candidate is truncated before scoring. MS MARCO also trains on short
+web passages, and technote chunks carrying headers, stack traces and log
+output sit well outside that distribution. The model reorders confidently on
+input it cannot fully see, and some gold chunks get pushed down.
+
+The mode stays in the codebase because the comparison is the point: it is
+selectable in the UI and it keeps its row in this table. Making it
+competitive would mean shrinking chunks to fit the cross-encoder window, or
+picking a reranker with a longer context, and that is a chunking change
+rather than a reranking change.
 
 ### LLM output
 
@@ -155,12 +174,33 @@ Two measurements, run for every prompt variant in `app/rag.py`:
    unanswerable question is a hallucination by construction. The
    hallucination rate is the headline number of this project.
 
+Measured with `deepseek-v4-flash` as the answering model and `hy4-preview`
+as the judge, both through an OpenAI-compatible endpoint, 100 questions per
+subset.
+
 | prompt | relevant | partly | non-relevant | wrong abstain | hallucination rate |
 |---|---|---|---|---|---|
-| v1 | TODO | TODO | TODO | TODO | TODO |
-| v2 | TODO | TODO | TODO | TODO | TODO |
+| **v1** | **0.54** | 0.11 | 0.00 | **0.35** | **0.12** |
+| v2 | 0.25 | 0.04 | 0.00 | 0.71 | 0.13 |
 
-<!-- TODO(results): run, paste, and pick the shipped prompt. -->
+**`v1` ships as the default.** v2 was written to trade a little coverage for
+fewer hallucinations by insisting the context answer the question *fully*.
+It did not buy that trade. The hallucination rate is flat between the two
+(0.12 against 0.13, well inside sampling noise at n=100), while wrong
+abstentions doubled from 0.35 to 0.71. v2 refuses on more than twice as many
+questions the corpus can actually answer, for no measurable safety gain.
+
+Both prompts score 0.00 non-relevant: on this corpus, when the system
+answers at all, the judge never found the answer wrong. The failure mode is
+over-caution rather than fabrication, which is the direction the problem
+statement argued for. But v1 still abstains on 35% of answerable questions,
+which is high against a retrieval hit rate of 0.938, and the two numbers are
+not measuring the same thing. The retrieval eval over-retrieves 15 chunks
+and scores the top 5 unique *documents*, whereas `answer()` passes 5
+*chunks* to the model, which can come from only one or two documents. The
+generator therefore sees a narrower slice of the corpus than the hit rate
+suggests, and raising the chunk limit is the first thing to try against that
+35%.
 
 ## Monitoring
 
@@ -195,11 +235,11 @@ data/       generated artifacts (gitignored)
 |---|---|
 | Problem description | described above |
 | Retrieval flow | knowledge base (Qdrant) + LLM |
-| Retrieval evaluation | 3 approaches compared, best one shipped |
-| LLM evaluation | 2+ prompts compared on relevance and hallucination rate |
+| Retrieval evaluation | 4 modes compared over 610 questions, hybrid ships |
+| LLM evaluation | 2 prompts compared on relevance and hallucination, v1 ships |
 | Interface | Streamlit UI |
-| Ingestion pipeline | automated script (`ingest/ingest.py`) |
-| Monitoring | feedback collection + Grafana dashboard |
+| Ingestion pipeline | scripted and idempotent (`ingest/ingest.py`) |
+| Monitoring | thumbs feedback + provisioned Grafana dashboard, 6 panels |
 | Containerization | everything in docker-compose |
 | Reproducibility | pinned deps, public dataset, quickstart above |
 | Hybrid search | evaluated and available as a mode |
@@ -210,9 +250,11 @@ data/       generated artifacts (gitignored)
 
 Marked as `TODO(...)` in the code so they're greppable:
 
-- [ ] `TODO(results)`: run both evals, paste numbers into this README,
-      record which retrieval mode and prompt ship as defaults
-- [ ] `TODO(prompts)`: a v3 prompt informed by v1/v2 failure cases
-- [ ] `TODO(dashboard)`: build the Grafana panels from monitoring/queries.md,
-      commit the dashboard JSON, screenshot for this README
+- [ ] `TODO(prompts)`: a v3 prompt informed by v1/v2 failure cases. v1
+      abstains on 35% of answerable questions, so the target is recovering
+      those without moving the hallucination rate
+- [ ] Raise the chunk limit `answer()` passes to the model. Retrieval finds
+      the gold document 94% of the time, but the generator only sees 5
+      chunks, which is the most likely cause of the wrong abstentions
+- [ ] Screenshot the Grafana dashboard for this README
 - [ ] Cloud deployment for the bonus points
