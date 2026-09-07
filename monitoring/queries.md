@@ -3,14 +3,13 @@
 Grafana runs at http://localhost:3000 (admin / value of GRAFANA_ADMIN_PASSWORD).
 The Postgres datasource is provisioned automatically as `TechnotePG`.
 
-The rubric wants user feedback collection plus a dashboard with at least
-five charts. Feedback collection is already wired (thumbs in the UI write
-to the `feedback` table). Build the dashboard by creating a panel per query
-below, then export the dashboard JSON into this folder and commit it so the
-repo carries the finished dashboard.
+Feedback collection is wired (thumbs in the UI write to the `feedback`
+table) and the dashboard is provisioned from
+`grafana/provisioning/dashboards/technote.json`, so it appears on startup
+with no manual import.
 
-TODO(dashboard): build the panels, screenshot the result for the README,
-export JSON to monitoring/grafana/dashboard.json.
+The six queries below are the source of truth for the six panels: they are
+copied verbatim into the dashboard JSON, so edit both together.
 
 ## Panel 1: questions over time (time series)
 

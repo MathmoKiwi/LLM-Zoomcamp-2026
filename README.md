@@ -159,12 +159,18 @@ Two measurements, run for every prompt variant in `app/rag.py`:
 
 Every Q&A round trip is logged to Postgres (mode, prompt version, latency,
 token counts, sources, whether the model abstained), and the UI collects
-thumbs up/down per answer. Grafana is provisioned against the same
-database; panel SQL for six charts lives in
-[monitoring/queries.md](monitoring/queries.md).
+thumbs up/down per answer.
 
-<!-- TODO(dashboard): build panels, commit the exported dashboard JSON,
-     add a screenshot here. -->
+Grafana is provisioned against the same database, dashboard and datasource
+both, so the "Technote Copilot" dashboard is there on first load at
+http://localhost:3000 with no import step. Its six panels are questions over
+time, feedback ratio, p95 response time by retrieval mode, abstention rate
+over time, token spend per day, and most retrieved documents. The panel SQL
+is kept in [monitoring/queries.md](monitoring/queries.md) alongside the
+dashboard JSON. Panels stay empty until the app has answered a few
+questions, since they read the live logging tables.
+
+<!-- TODO(dashboard): add a screenshot of the dashboard here. -->
 
 ## Project layout
 
