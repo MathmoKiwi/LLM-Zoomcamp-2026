@@ -104,17 +104,23 @@ the same scripts directly.
 
 ## Evaluation
 
+The `make` targets below are convenience wrappers. If you do not have make
+installed, every one of them has a plain docker compose equivalent shown
+underneath.
+
 Build the eval sets first (writes `data/eval_answerable.jsonl` and
 `data/eval_impossible.jsonl`):
 
 ```bash
 make eval-sets
+docker compose run --rm --no-deps ingest python evals/build_eval_set.py
 ```
 
 ### Retrieval
 
 ```bash
 make eval-retrieval
+docker compose run --rm ingest python evals/eval_retrieval.py
 ```
 
 Compares keyword, vector, hybrid, and hybrid_rerank on document-level hit
@@ -136,6 +142,7 @@ against the mode it has to beat. Results:
 
 ```bash
 make eval-llm
+docker compose run --rm ingest python evals/eval_llm.py --sample 100
 ```
 
 Two measurements, run for every prompt variant in `app/rag.py`:
