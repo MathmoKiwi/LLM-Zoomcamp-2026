@@ -32,6 +32,9 @@ services:
     environment:
       QDRANT_URL: http://qdrant:6333
       PG_HOST: postgres
+      # Default is $TMPDIR/fastembed_cache, which the model_cache volume
+      # does not cover, so every run re-downloads the models.
+      FASTEMBED_CACHE_PATH: /root/.cache/fastembed
     volumes:
       # Persist the fastembed model cache so restarts don't re-download.
       - model_cache:/root/.cache
@@ -50,6 +53,7 @@ services:
     env_file: .env
     environment:
       QDRANT_URL: http://qdrant:6333
+      FASTEMBED_CACHE_PATH: /root/.cache/fastembed
     volumes:
       - ./data:/code/data
       - model_cache:/root/.cache
