@@ -236,7 +236,13 @@ is kept in [monitoring/queries.md](monitoring/queries.md) alongside the
 dashboard JSON. Panels stay empty until the app has answered a few
 questions, since they read the live logging tables.
 
-<!-- TODO(dashboard): add a screenshot of the dashboard here. -->
+![The provisioned Grafana dashboard](docs/dashboard.png)
+
+The p95 panel is worth a second look. `vector` sits at 28.2 seconds against
+roughly 7 seconds for the other three modes, and that is not a retrieval
+problem: it is the one question asked with query rewriting enabled, paying
+for an extra LLM call before the search. The dashboard surfacing that cost
+without being asked is the point of having it.
 
 ## Project layout
 
@@ -275,5 +281,4 @@ Marked as `TODO(...)` in the code so they're greppable:
 - [ ] Raise the chunk limit `answer()` passes to the model. Retrieval finds
       the gold document 94% of the time, but the generator only sees 5
       chunks, which is the most likely cause of the wrong abstentions
-- [ ] Screenshot the Grafana dashboard for this README
 - [ ] Cloud deployment for the bonus points
